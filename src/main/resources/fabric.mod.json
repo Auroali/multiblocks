@@ -11,7 +11,7 @@
 		"sources": "https://github.com/Auroali/multiblocks",
 		"issues": "https://github.com/Auroali/multiblocks/issues"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/multiblocks/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -20,7 +20,6 @@
 		]
 	},
 	"mixins": [
-		"multiblocks.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.15.11",
