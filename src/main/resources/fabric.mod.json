@@ -1,0 +1,34 @@
+{
+	"schemaVersion": 1,
+	"id": "multiblocks",
+	"version": "${version}",
+	"name": "Multiblocks",
+	"description": "A simple multiblock library",
+	"authors": [
+		"Auroali"
+	],
+	"contact": {
+		"sources": "https://github.com/Auroali/multiblocks",
+		"issues": "https://github.com/Auroali/multiblocks/issues"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/multiblocks/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.auroali.multiblocks.Multiblocks"
+		]
+	},
+	"mixins": [
+		"multiblocks.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.15.11",
+		"minecraft": "~1.20.1",
+		"java": ">=17",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"another-mod": "*"
+	}
+}
