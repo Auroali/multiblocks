@@ -1,0 +1,71 @@
+{
+  "blocks": [
+    [
+      "   s   ",
+      " b d b ",
+      "   d   ",
+      "edddddw",
+      "   d   ",
+      " b d b ",
+      "   n   "
+    ],
+    [
+      "       ",
+      " m   m ",
+      "   d   ",
+      "  ddd  ",
+      "   d   ",
+      " m   m ",
+      "       "
+    ],
+    [
+      "       ",
+      " c   c ",
+      "       ",
+      "   b   ",
+      "       ",
+      " c   c ",
+      "       "
+    ],
+    [
+      "       ",
+      "       ",
+      "       ",
+      "   b   ",
+      "       ",
+      "       ",
+      "       "
+    ],
+    [
+      "       ",
+      "       ",
+      "       ",
+      "   f   ",
+      "       ",
+      "       ",
+      "       "
+    ],
+    [
+      "       ",
+      "       ",
+      "       ",
+      "   l   ",
+      "       ",
+      "       ",
+      "       "
+    ]
+  ],
+  "keys": {
+    "n": "minecraft:polished_deepslate_stairs[facing=north]",
+    "w": "minecraft:polished_deepslate_stairs[facing=west]",
+    "e": "minecraft:polished_deepslate_stairs[facing=east]",
+    "s": "minecraft:polished_deepslate_stairs[facing=south]",
+    "d": "minecraft:polished_deepslate",
+    "b": "minecraft:polished_basalt",
+    "f": "minecraft:air",
+    "l": "minecraft:polished_deepslate_slab",
+    "m": "minecraft:polished_deepslate_wall",
+    "c": "minecraft:soul_lantern"
+  },
+  "offset": [-3, -4, -3]
+}
