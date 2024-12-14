@@ -17,6 +17,9 @@
 	"entrypoints": {
 		"main": [
 			"com.auroali.multiblocks.Multiblocks"
+		],
+		"fabric-datagen": [
+			"com.auroali.multiblocks.testing.DatagenTest"
 		]
 	},
 	"mixins": [

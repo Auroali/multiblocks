@@ -1,79 +1,133 @@
 package com.auroali.multiblocks;
 
+import com.mojang.datafixers.util.Either;
+import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldView;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Consumer;
 
-public class Multiblock {
-    final List<MultiblockEntry> structure;
+public class Multiblock implements Iterable<Multiblock.Entry> {
+    public static final Codec<Multiblock> CODEC = PalettedMultiblock.CODEC.xmap(PalettedMultiblock::toMultiblock, Multiblock::toPalettedMultiblock);
+    final Set<Entry> structure;
+    final BlockPos offset;
 
-    private Multiblock(List<MultiblockEntry> entries) {
+    public Multiblock(Set<Entry> entries, BlockPos offset) {
         this.structure = entries;
+        this.offset = offset;
     }
 
-    public boolean matches(World world, BlockPos pos) {
-        for(MultiblockEntry entry : structure) {
-            if(!entry.value().matches(world.getBlockState(entry.pos.add(pos)))) {
+    public boolean matches(WorldView world, BlockPos pos, BlockRotation rotation) {
+        for(Entry entry : this.structure) {
+            BlockState state = world.getBlockState(
+                    entry.offset()
+                            .rotate(rotation)
+                            .add(this.offset)
+                            .add(pos)
+            );
+            boolean matches = entry.value().map(state::isIn, testState -> testState.rotate(rotation) == state);
+            if(!matches)
                 return false;
-            }
         }
         return true;
     }
-    public boolean matches(World world, BlockPos pos, BlockRotation rotation) {
-        for(MultiblockEntry entry : structure) {
-            if(!entry.value().matches(world.getBlockState(entry.pos.add(pos).rotate(rotation)).rotate(rotation), rotation)) {
-                return false;
-            }
-        }
-        return true;
+
+    public boolean matches(WorldView world, BlockPos pos) {
+        return this.matches(world, pos, BlockRotation.NONE);
     }
 
-    public static Multiblock compile(List<List<String>> pattern, Map<Character, MultiblockKey> keys, BlockPos offset) {
-        List<MultiblockEntry> entries = new ArrayList<>();
-        for(int y = 0; y < pattern.size(); y++) {
-            for(int z = 0; z < pattern.get(y).size(); z++) {
-                String chars = pattern.get(y).get(z);
-                for(int x = 0; x < chars.length(); x++) {
-                    char k = chars.charAt(x);
-                    if(k == ' ') continue;
-                    MultiblockKey val = keys.get(k);
-                    BlockPos pos = new BlockPos(x + offset.getX(), y + offset.getY(), z + offset.getZ());
-                    entries.add(new MultiblockEntry(pos, val));
-                }
+    protected PalettedMultiblock toPalettedMultiblock() {
+        List<Either<TagKey<Block>, BlockState>> palette = new ArrayList<>();
+        Object2IntArrayMap<BlockPos> values = new Object2IntArrayMap<>();
+        for(Entry entry : this.structure) {
+            int paletteIndex = palette.indexOf(entry.value());
+            if(paletteIndex == -1) {
+                paletteIndex = palette.size();
+                palette.add(entry.value());
             }
+
+            values.put(entry.offset(), paletteIndex);
         }
-        return new Multiblock(entries);
+        return new PalettedMultiblock(palette, values, this.offset);
     }
 
-    public record MultiblockEntry(BlockPos pos, MultiblockKey value) {}
-    public static class MultiblockKey {
-        BlockState state;
-        TagKey<Block> tag;
-        boolean isTag;
-        public static MultiblockKey of(TagKey<Block> tag) {
-            MultiblockKey v = new MultiblockKey();
-            v.tag = tag;
-            v.isTag = true;
-            return v;
+    @NotNull
+    @Override
+    public Iterator<Entry> iterator() {
+        return this.structure.iterator();
+    }
+
+    @Override
+    public void forEach(Consumer<? super Entry> action) {
+        this.structure.forEach(action);
+    }
+
+    public void forEach(Consumer<? super Entry> action, BlockRotation rotation) {
+        this.structure.forEach(entry -> {
+            Entry rotated = new Entry(entry.offset().rotate(rotation), entry.value().mapRight(state -> state.rotate(rotation)));
+            action.accept(rotated);
+        });
+    }
+
+    @Override
+    public Spliterator<Entry> spliterator() {
+        return this.structure.spliterator();
+    }
+
+    public BlockPos getOffset() {
+        return this.offset;
+    }
+
+    public record Entry(BlockPos offset, Either<TagKey<Block>, BlockState> value) {
+        public static final Codec<Entry> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                BlockPos.CODEC.fieldOf("offset").forGetter(Entry::offset),
+                Codec.either(TagKey.codec(RegistryKeys.BLOCK), BlockState.CODEC).fieldOf("value").forGetter(Entry::value)
+        ).apply(instance, Entry::new));
+
+        @Override
+        public int hashCode() {
+            return offset.hashCode();
         }
-        public static MultiblockKey of(BlockState state) {
-            MultiblockKey v = new MultiblockKey();
-            v.state = state;
-            v.isTag = false;
-            return v;
-        }
-        public boolean matches(BlockState state) {
-            return isTag ? state.isIn(tag) : state == this.state;
-        }
-        public boolean matches(BlockState state, BlockRotation rotation) {
-            return isTag ? state.isIn(tag) : state == this.state.rotate(rotation);
+    }
+    protected record PalettedMultiblock(List<Either<TagKey<Block>, BlockState>> palette, Object2IntArrayMap<BlockPos> values, BlockPos offset) {
+        public static final Codec<PalettedMultiblock> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+                Codec.either(TagKey.codec(RegistryKeys.BLOCK), BlockState.CODEC).listOf().fieldOf("palette").forGetter(PalettedMultiblock::palette),
+                Codec.mapPair(BlockPos.CODEC.fieldOf("pos"), Codec.INT.fieldOf("index"))
+                        .codec()
+                        .listOf()
+                        .xmap(pairs -> {
+                            Object2IntArrayMap<BlockPos> map = new Object2IntArrayMap<>();
+                            pairs.forEach(pair -> map.put(pair.getFirst(), pair.getSecond().intValue()));
+                            return map;
+                        }, map -> {
+                            List<Pair<BlockPos, Integer>> pairs = new ArrayList<>(map.size());
+                            map.forEach((key, value) -> pairs.add(new Pair<>(key, value)));
+                            return pairs;
+                        })
+                        .fieldOf("entries")
+                        .forGetter(PalettedMultiblock::values),
+                BlockPos.CODEC.optionalFieldOf("offset", BlockPos.ORIGIN).forGetter(PalettedMultiblock::offset)
+        ).apply(instance, PalettedMultiblock::new));
+        public Multiblock toMultiblock() {
+            Set<Entry> structure = new HashSet<>();
+            values.forEach((pos, index) -> {
+                Entry entry = new Entry(pos, palette().get(index));
+                structure.add(entry);
+            });
+            return new Multiblock(structure, this.offset());
         }
     }
 }

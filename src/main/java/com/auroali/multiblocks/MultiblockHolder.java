@@ -39,6 +39,10 @@ public class MultiblockHolder {
         return multiblock != null && multiblock.matches(world, pos);
     }
 
+    public boolean isEmpty() {
+        return this.multiblock == null;
+    }
+
     protected static MultiblockHolder createEmpty() {
         return new MultiblockHolder();
     }

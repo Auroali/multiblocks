@@ -31,6 +31,7 @@ import net.minecraft.util.profiler.Profiler;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 
 public class MultiblockReloadListener extends JsonDataLoader implements IdentifiableResourceReloadListener {
     public static final Identifier ID = new Identifier(Multiblocks.MOD_ID, "multiblock_loader");
@@ -43,57 +44,18 @@ public class MultiblockReloadListener extends JsonDataLoader implements Identifi
         profiler.push("multiblocks");
         MultiblockRegistry.REGISTERED_MULTIBLOCKS.clear();
         prepared.forEach((id, element) -> {
-            JsonObject multiblock = element.getAsJsonObject();
-            BlockPos offset = BlockPos.CODEC.decode(JsonOps.INSTANCE, multiblock.get("offset"))
-                    .resultOrPartial(s -> Multiblocks.LOGGER.warn("Failed to parse offset for {}: {}", id, s))
-                    .map(Pair::getFirst)
-                    .orElse(BlockPos.ORIGIN);
-            JsonObject keys = multiblock.getAsJsonObject("keys");
-            HashMap<Character, Multiblock.MultiblockKey> palette = new HashMap<>();
-            profiler.push("palette");
-            for(Iterator<String> it = keys.keySet().iterator(); it.hasNext(); ) {
-                String key = it.next();
-                if(key.length() != 1) {
-                    Multiblocks.LOGGER.error("Failed to parse multiblock {}: Expected single character key, got {}", id, key);
-                    return;
-                }
-                String value = keys.get(key).getAsString();
-                Multiblock.MultiblockKey multiblockKey;
-                if(value.startsWith("#")) {
-                    Identifier tagId = Identifier.tryParse(value.substring(1));
-                    if(tagId == null) {
-                        Multiblocks.LOGGER.error("Failed to parse multiblock {}: Invalid Tag '{}'", id, value);
-                    }
-                    multiblockKey = Multiblock.MultiblockKey.of(TagKey.of(RegistryKeys.BLOCK, tagId));
-                } else {
-                    try {
-                        multiblockKey = Multiblock.MultiblockKey.of(BlockArgumentParser.block(Registries.BLOCK.getReadOnlyWrapper(), value, false).blockState());
-                    } catch (CommandSyntaxException e) {
-                        Multiblocks.LOGGER.error("Failed to parse multiblock {}: Failed to parse blockstate {}", id, value);
-                        return;
-                    }
-                }
-                palette.put(key.charAt(0), multiblockKey);
-            }
-            profiler.swap("blocks");
-            List<List<String>> multiblockLayers = new ArrayList<>();
-            JsonArray layers = multiblock.get("blocks").getAsJsonArray();
-            for(int i = 0; i < layers.size(); i++) {
-                JsonArray layer = layers.get(i).getAsJsonArray();
-                List<String> multiblockLayer = new ArrayList<>();
-                multiblockLayers.add(multiblockLayer);
-                for(int j = 0; j < layer.size(); j++) {
-                    multiblockLayer.add(layer.get(j).getAsString());
-                }
-            }
-            profiler.swap("compiling");
+            long startTime = System.nanoTime();
+            profiler.push("deserialize multiblock");
+            Multiblock.CODEC.parse(JsonOps.INSTANCE, element)
+                    .resultOrPartial(Multiblocks.LOGGER::error)
+                    .ifPresent(mb -> MultiblockRegistry.REGISTERED_MULTIBLOCKS.put(id, mb));
             profiler.pop();
-            MultiblockRegistry.REGISTERED_MULTIBLOCKS.put(id, Multiblock.compile(multiblockLayers, palette, offset));
-            profiler.pop();
+            long delta = System.nanoTime() - startTime;
+            Multiblocks.LOGGER.info("Multiblocks took {}ms to read", TimeUnit.MILLISECONDS.convert(delta, TimeUnit.NANOSECONDS));
         });
-        MultiblockHolder.holders.forEach((identifier, multiblockHolder) -> {
-            multiblockHolder.multiblock = MultiblockRegistry.REGISTERED_MULTIBLOCKS.get(identifier);
-        });
+        MultiblockHolder.holders.forEach((identifier, multiblockHolder) ->
+            multiblockHolder.multiblock = MultiblockRegistry.REGISTERED_MULTIBLOCKS.get(identifier)
+        );
     }
 
     @Override
