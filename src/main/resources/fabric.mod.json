@@ -1,8 +1,8 @@
 {
 	"schemaVersion": 1,
-	"id": "multiblocks",
+	"id": "auroali_multiblocks",
 	"version": "${version}",
-	"name": "Multiblocks",
+	"name": "Auroali's Multiblocks",
 	"description": "A simple multiblock library",
 	"authors": [
 		"Auroali"
