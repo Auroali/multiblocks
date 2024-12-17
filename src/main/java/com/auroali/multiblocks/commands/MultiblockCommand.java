@@ -82,7 +82,7 @@ public class MultiblockCommand {
     public static int placeMultiblock(CommandContext<ServerCommandSource> ctx, Multiblock multiblock, BlockPos pos, BlockRotation rotation) {
         World world = ctx.getSource().getWorld();
         multiblock.forEach(entry -> {
-            BlockPos newPos = entry.offset().add(multiblock.getOffset()).add(pos);
+            BlockPos newPos = entry.offset().add(pos);
             BlockState toPlace = entry.value()
                     .mapLeft(tag -> {
                         var blocks = Registries.BLOCK.getEntryList(tag);

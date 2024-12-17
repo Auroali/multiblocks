@@ -12,7 +12,7 @@ base {
 
 fabricApi {
 	configureDataGeneration({
-		setModId("multiblocks")
+		setModId("auroali_multiblocks")
 	})
 }
 

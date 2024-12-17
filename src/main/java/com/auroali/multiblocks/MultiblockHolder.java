@@ -6,7 +6,9 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 public class MultiblockHolder {
     protected static final HashMap<Identifier, MultiblockHolder> holders = new HashMap<>();
@@ -41,6 +43,21 @@ public class MultiblockHolder {
 
     public boolean isEmpty() {
         return this.multiblock == null;
+    }
+
+    public Optional<List<BlockPos>> getCustomProperty(String name) {
+        if(this.isEmpty())
+            return Optional.empty();
+        List<BlockPos> posList = this.multiblock.getCustomProperty(name);
+        return posList == null ? Optional.empty() : Optional.of(posList);
+    }
+
+    public void forEachCustomProperty(String name, Consumer<BlockPos> consumer) {
+        if(this.isEmpty())
+            return;
+        List<BlockPos> posList = this.multiblock.getCustomProperty(name);
+        if(posList != null)
+            posList.forEach(consumer);
     }
 
     protected static MultiblockHolder createEmpty() {

@@ -35,6 +35,7 @@ public class DatagenTest implements DataGeneratorEntrypoint {
                     .add(new BlockPos(1, 0, -1), Blocks.DARK_OAK_BUTTON.getDefaultState().with(Properties.WALL_MOUNT_LOCATION, WallMountLocation.FLOOR))
                     .add(new BlockPos(-1, 0, -1), Blocks.DARK_OAK_BUTTON.getDefaultState().with(Properties.WALL_MOUNT_LOCATION, WallMountLocation.FLOOR))
                     .add(new BlockPos(-1, 0, 1), Blocks.DARK_OAK_BUTTON.getDefaultState().with(Properties.WALL_MOUNT_LOCATION, WallMountLocation.FLOOR))
+                    .custom("amethyst", new BlockPos(0, 0, 0))
                     .offerTo(consumer);
         }
     }

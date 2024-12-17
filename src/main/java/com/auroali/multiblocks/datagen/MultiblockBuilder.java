@@ -8,14 +8,13 @@ import net.minecraft.registry.tag.TagKey;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 
 public class MultiblockBuilder {
     final Identifier id;
     final Set<Multiblock.Entry> structure = new HashSet<>();
-    BlockPos offset = BlockPos.ORIGIN;
+    final HashMap<String, List<BlockPos>> customData = new HashMap<>();
 
     protected MultiblockBuilder(Identifier id) {
         this.id = id;
@@ -39,14 +38,13 @@ public class MultiblockBuilder {
         return this.add(pos, block.getDefaultState());
     }
 
-    public MultiblockBuilder offset(BlockPos offset) {
-        this.offset = offset;
+    public MultiblockBuilder custom(String name, BlockPos pos) {
+        this.customData.computeIfAbsent(name, key -> new ArrayList<>())
+                .add(pos);
         return this;
     }
 
     public void validate() {
-        if(this.offset == null)
-            throw new IllegalStateException("Offset cannot be null");
         if(this.structure.isEmpty())
             throw new IllegalStateException("Multiblock cannot be empty");
         if(this.id == null)
@@ -55,6 +53,6 @@ public class MultiblockBuilder {
 
     public void offerTo(MultiblockDataProvider.MultiblockConsumer provider) {
         this.validate();
-        provider.accept(this.id, new Multiblock(this.structure, this.offset));
+        provider.accept(this.id, new Multiblock(this.structure, this.customData));
     }
 }

@@ -23,11 +23,11 @@ import java.util.function.Consumer;
 public class Multiblock implements Iterable<Multiblock.Entry> {
     public static final Codec<Multiblock> CODEC = PalettedMultiblock.CODEC.xmap(PalettedMultiblock::toMultiblock, Multiblock::toPalettedMultiblock);
     final Set<Entry> structure;
-    final BlockPos offset;
+    final Map<String, List<BlockPos>> customData;
 
-    public Multiblock(Set<Entry> entries, BlockPos offset) {
+    public Multiblock(Set<Entry> entries, Map<String, List<BlockPos>> customData) {
         this.structure = entries;
-        this.offset = offset;
+        this.customData = customData;
     }
 
     public boolean matches(WorldView world, BlockPos pos, BlockRotation rotation) {
@@ -35,7 +35,6 @@ public class Multiblock implements Iterable<Multiblock.Entry> {
             BlockState state = world.getBlockState(
                     entry.offset()
                             .rotate(rotation)
-                            .add(this.offset)
                             .add(pos)
             );
             boolean matches = entry.value().map(state::isIn, testState -> testState.rotate(rotation) == state);
@@ -61,7 +60,7 @@ public class Multiblock implements Iterable<Multiblock.Entry> {
 
             values.put(entry.offset(), paletteIndex);
         }
-        return new PalettedMultiblock(palette, values, this.offset);
+        return new PalettedMultiblock(palette, values, this.customData);
     }
 
     @NotNull
@@ -87,8 +86,8 @@ public class Multiblock implements Iterable<Multiblock.Entry> {
         return this.structure.spliterator();
     }
 
-    public BlockPos getOffset() {
-        return this.offset;
+    public List<BlockPos> getCustomProperty(String name) {
+        return this.customData.get(name);
     }
 
     public record Entry(BlockPos offset, Either<TagKey<Block>, BlockState> value) {
@@ -102,7 +101,7 @@ public class Multiblock implements Iterable<Multiblock.Entry> {
             return offset.hashCode();
         }
     }
-    protected record PalettedMultiblock(List<Either<TagKey<Block>, BlockState>> palette, Object2IntArrayMap<BlockPos> values, BlockPos offset) {
+    protected record PalettedMultiblock(List<Either<TagKey<Block>, BlockState>> palette, Object2IntArrayMap<BlockPos> values, Map<String, List<BlockPos>> customData) {
         public static final Codec<PalettedMultiblock> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.either(TagKey.codec(RegistryKeys.BLOCK), BlockState.CODEC).listOf().fieldOf("palette").forGetter(PalettedMultiblock::palette),
                 Codec.mapPair(BlockPos.CODEC.fieldOf("pos"), Codec.INT.fieldOf("index"))
@@ -119,7 +118,7 @@ public class Multiblock implements Iterable<Multiblock.Entry> {
                         })
                         .fieldOf("entries")
                         .forGetter(PalettedMultiblock::values),
-                BlockPos.CODEC.optionalFieldOf("offset", BlockPos.ORIGIN).forGetter(PalettedMultiblock::offset)
+                Codec.unboundedMap(Codec.STRING, BlockPos.CODEC.listOf()).optionalFieldOf("custom", new HashMap<>()).forGetter(PalettedMultiblock::customData)
         ).apply(instance, PalettedMultiblock::new));
         public Multiblock toMultiblock() {
             Set<Entry> structure = new HashSet<>();
@@ -127,7 +126,7 @@ public class Multiblock implements Iterable<Multiblock.Entry> {
                 Entry entry = new Entry(pos, palette().get(index));
                 structure.add(entry);
             });
-            return new Multiblock(structure, this.offset());
+            return new Multiblock(structure, this.customData());
         }
     }
 }

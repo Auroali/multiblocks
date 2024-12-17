@@ -23,14 +23,11 @@ public class MultiblockReloadListener extends JsonDataLoader implements Identifi
         profiler.push("multiblocks");
         MultiblockRegistry.REGISTERED_MULTIBLOCKS.clear();
         prepared.forEach((id, element) -> {
-            long startTime = System.nanoTime();
             profiler.push("deserialize multiblock");
             Multiblock.CODEC.parse(JsonOps.INSTANCE, element)
                     .resultOrPartial(Multiblocks.LOGGER::error)
                     .ifPresent(mb -> MultiblockRegistry.REGISTERED_MULTIBLOCKS.put(id, mb));
             profiler.pop();
-            long delta = System.nanoTime() - startTime;
-            Multiblocks.LOGGER.info("Multiblocks took {}ms to read", TimeUnit.MILLISECONDS.convert(delta, TimeUnit.NANOSECONDS));
         });
         MultiblockHolder.holders.forEach((identifier, multiblockHolder) ->
             multiblockHolder.multiblock = MultiblockRegistry.REGISTERED_MULTIBLOCKS.get(identifier)
